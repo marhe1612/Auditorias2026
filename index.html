@@ -155,6 +155,27 @@
   .empresa-header{margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border);}
   .empresa-nombre{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--text);}
   .empresa-sub{font-size:12px;color:var(--text2);margin-top:3px;}
+  /* MÓDULO DE RUTA */
+  .ruta-progress{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px;}
+  .ruta-progress-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .ruta-progress-title{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;}
+  .ruta-progress-nums{font-family:var(--mono);font-size:12px;color:var(--text2);}
+  .ruta-progress-nums strong{color:var(--accent2);}
+  .ruta-sitio-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;}
+  .ruta-sitio-card.auditado{opacity:.45;}
+  .ruta-sitio-card.actual{border-color:var(--accent2);background:rgba(0,200,150,.05);}
+  .ruta-sitio-num{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text3);min-width:24px;text-align:center;}
+  .ruta-sitio-info{flex:1;min-width:0;}
+  .ruta-sitio-code{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent);}
+  .ruta-sitio-dir{font-size:11px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  /* MODAL SIGUIENTE SITIO */
+  .siguiente-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:400;display:none;align-items:center;justify-content:center;padding:20px;}
+  .siguiente-overlay.open{display:flex;}
+  .siguiente-card{background:var(--bg2);border:1px solid var(--accent2);border-radius:16px;padding:24px 20px;width:100%;max-width:400px;text-align:center;}
+  .siguiente-label{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--accent2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;}
+  .siguiente-codigo{font-family:var(--mono);font-size:24px;font-weight:600;color:var(--text);margin-bottom:4px;}
+  .siguiente-dir{font-size:13px;color:var(--text2);margin-bottom:6px;}
+  .siguiente-dist{font-family:var(--mono);font-size:12px;color:var(--accent2);margin-bottom:20px;}
   @media print{
     .report-overlay{position:static;padding:0;}
     body{background:white;color:black;}
@@ -167,7 +188,8 @@
 <body>
 
 <div class="app-header">
-  <div class="app-logo">OOH<span>/audit</span> 2026</div>
+  <div class="app-logo" id="header-logo">OOH<span>/audit</span> 2026</div>
+  <div id="header-sitio" style="display:none;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent2);letter-spacing:.05em;flex:1;text-align:center;"></div>
   <div style="display:flex;gap:8px;">
     <button class="btn btn-outline btn-sm" onclick="openSessionModal()">⚙ Sesión</button>
   </div>
@@ -326,6 +348,7 @@
         <div class="gps-row">
           <div class="gps-display empty" id="gps-display">Sin ubicación</div>
           <button class="btn btn-outline btn-sm" onclick="captureGPS()">📍 Capturar</button>
+          <button class="btn btn-outline btn-sm" onclick="limpiarGPS()" id="btn-limpiar-gps" style="display:none;">✕</button>
         </div>
         <input type="hidden" id="f-lat">
         <input type="hidden" id="f-lon">
@@ -604,6 +627,24 @@
   </div>
 </div>
 
+<!-- RUTA DEL DÍA -->
+<div id="view-ruta" class="view">
+  <div class="ruta-progress" id="ruta-progress-card" style="display:none;">
+    <div class="ruta-progress-header">
+      <div class="ruta-progress-title">📍 Progreso de jornada</div>
+      <div class="ruta-progress-nums"><strong id="ruta-done">0</strong> / <span id="ruta-total">0</span> sitios</div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="ruta-progress-fill" style="width:0%"></div></div>
+  </div>
+  <div class="card" id="ruta-sin-inventario" style="display:none;">
+    <div class="empty-state" style="padding:20px 0;">
+      <div class="icon">📂</div>
+      <p>Carga el inventario desde la pantalla de inicio para activar la ruta.</p>
+    </div>
+  </div>
+  <div id="ruta-lista"></div>
+</div>
+
 <!-- REPORTES -->
 <div class="report-overlay" id="report-dg">
   <div class="report-header">
@@ -647,11 +688,27 @@
   </div>
 </div>
 
+<!-- MODAL SIGUIENTE SITIO -->
+<div class="siguiente-overlay" id="siguiente-overlay">
+  <div class="siguiente-card">
+    <div class="siguiente-label">✓ Sitio guardado — Siguiente parada</div>
+    <div class="siguiente-codigo" id="sig-codigo">—</div>
+    <div class="siguiente-dir" id="sig-dir">—</div>
+    <div class="siguiente-dist" id="sig-dist">—</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="btn btn-success btn-full" onclick="irAlSiguiente()">🗺 Navegar con Google Maps</button>
+      <button class="btn btn-primary btn-full" onclick="iniciarAuditoriaSiguiente()">📋 Iniciar auditoría ahora</button>
+      <button class="btn btn-outline btn-full" onclick="cerrarSiguiente()">Ver otros sitios cercanos</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <nav class="nav-bar">
   <button class="nav-item active" id="nav-home" onclick="showView('view-home')"><span class="nav-icon">🏠</span>inicio</button>
   <button class="nav-item" id="nav-buscar" onclick="showView('view-buscar')"><span class="nav-icon">🔍</span>buscar</button>
+  <button class="nav-item" id="nav-ruta" onclick="showView('view-ruta')"><span class="nav-icon">🗺</span>ruta</button>
   <button class="nav-item" id="nav-list" onclick="showView('view-list');renderList()"><span class="nav-icon">📋</span>registros</button>
 </nav>
 
@@ -663,9 +720,12 @@ let records = [];
 let currentRecord = null;
 let currentSection = 0;
 let editingIndex = -1;
-let inventario = [];   // sitios físicos del Excel
-let caritaFeliz = [];  // pedidos del reporte comercial
+let inventario = [];
+let caritaFeliz = [];
+let geofenceWatcher = null;
+let siguienteSitio = null;
 const STORAGE_KEY = 'ooh_audit_2026_v2';
+const GEOFENCE_RADIO = 150;
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 window.onload = () => {
@@ -743,21 +803,71 @@ function cargarCaritaFeliz(event) {
 function cruceComercial(codigoEspacio, fechaAuditoria) {
   if (!caritaFeliz.length) return null;
   const fecha = new Date(fechaAuditoria || new Date());
-  // Busca pedidos que coincidan con el código (cualquier cara N/C)
-  const base = codigoEspacio.replace(/[NC]$/, '').replace(/-\d+$/, '');
-  const pedidos = caritaFeliz.filter(r => {
-    const clave = String(r['Clave Interna'] || '');
-    return clave === codigoEspacio || clave.startsWith(base);
-  });
-  if (!pedidos.length) return {tipo:'libre', mensaje:'Sin pedidos en sistema', anunciante:'', fechaFin:''};
 
-  // Parsear fechas
   const parseFecha = v => {
     if (!v) return null;
     if (v instanceof Date) return v;
     const d = new Date(v);
     return isNaN(d) ? null : d;
   };
+
+  // Primero buscar coincidencia EXACTA con la cara específica (RCH013N o RCH013C)
+  let pedidos = caritaFeliz.filter(r => String(r['Clave Interna'] || '') === codigoEspacio);
+
+  // Si no hay coincidencia exacta, buscar por base solo para vallas/pantallas (no N/C)
+  if (!pedidos.length) {
+    const base = codigoEspacio.replace(/[NC]$/, '').replace(/-\d+$/, '');
+    const tieneNC = /[NC]$/.test(codigoEspacio);
+    if (!tieneNC) {
+      pedidos = caritaFeliz.filter(r => String(r['Clave Interna'] || '').startsWith(base));
+    }
+  }
+
+  if (!pedidos.length) return {tipo:'libre', mensaje:'Sin pedidos en sistema', anunciante:'', fechaFin:''};
+
+  // Activos vigentes
+  const activos = pedidos.filter(r => {
+    const estado = String(r['Estado del Pedido'] || '');
+    const fin = parseFecha(r['Fecha de Fin']);
+    const ini = parseFecha(r['Fecha de Inicio']);
+    return estado === 'Activo' && fin && fin >= fecha && ini && ini <= fecha;
+  });
+
+  if (activos.length) {
+    const a = activos[0];
+    const fin = parseFecha(a['Fecha de Fin']);
+    const diasRestantes = fin ? Math.ceil((fin - fecha) / (1000*60*60*24)) : 0;
+    return {
+      tipo: 'activo',
+      mensaje: `Debe estar: ${a['Anunciante']}`,
+      anunciante: String(a['Anunciante'] || ''),
+      campana: String(a['Campaña'] || ''),
+      fechaInicio: String(a['Fecha de Inicio'] || ''),
+      fechaFin: String(a['Fecha de Fin'] || ''),
+      diasRestantes
+    };
+  }
+
+  // Inactivos (Finalizado/Recortado/Rotativo) con fecha de fin futura
+  const inactivosVigentes = pedidos.filter(r => {
+    const estado = String(r['Estado del Pedido'] || '');
+    const fin = parseFecha(r['Fecha de Fin']);
+    return estado !== 'Activo' && fin && fin >= fecha;
+  });
+
+  if (inactivosVigentes.length) {
+    const a = inactivosVigentes[0];
+    return {
+      tipo: 'inactivo_vigente',
+      mensaje: `⚠ Pedido ${a['Estado del Pedido']} con fecha vigente: ${a['Anunciante']}`,
+      anunciante: String(a['Anunciante'] || ''),
+      estado: String(a['Estado del Pedido'] || ''),
+      fechaFin: String(a['Fecha de Fin'] || '')
+    };
+  }
+
+  return {tipo:'libre', mensaje:'Sistema indica: Disponible', anunciante:'', fechaFin:''};
+}
 
   // Activos vigentes
   const activos = pedidos.filter(r => {
@@ -975,14 +1085,16 @@ function initNewRecord(sitioData) {
   if (session.auditor) document.getElementById('f-auditor').value = session.auditor;
 
   if (sitioData) {
-    // Pre-llenar desde inventario
-    document.getElementById('f-codigo').value = sitioData['Espacio'] || '';
+    const codigo = sitioData['Espacio'] || '';
+    document.getElementById('f-codigo').value = codigo;
     document.getElementById('f-plaza').value = sitioData['Plaza'] || '';
     document.getElementById('f-ciudad').value = sitioData['Ciudad'] || '';
     document.getElementById('f-direccion').value = sitioData['Dirección'] || '';
     document.getElementById('f-tipo').value = sitioData['Tipo Estructura'] || '';
     document.getElementById('f-orientacion').value = sitioData['Orientación'] || '';
-    // GPS de referencia del inventario (se puede sobrescribir con el botón)
+    // Mostrar código en header
+    document.getElementById('header-sitio').textContent = `${codigo} · ${sitioData['Tipo Estructura']||''}`;
+    // GPS de referencia del inventario
     const latRef = sitioData['Latitud'];
     const lonRef = sitioData['Longitud'];
     if (latRef && lonRef) {
@@ -1000,10 +1112,11 @@ function initNewRecord(sitioData) {
     const cruce = cruceComercial(sitioData['Espacio'], document.getElementById('f-fecha').value);
     currentRecord.cruceComercial = cruce;
     renderAlertaComercial(cruce);
-    // Si hay anunciante activo pre-llenar el campo
     if (cruce && cruce.tipo === 'activo') {
       document.getElementById('f-anunciante').value = cruce.anunciante;
     }
+  } else {
+    document.getElementById('header-sitio').textContent = 'Sitio nuevo';
   }
 
   showView('view-form');
@@ -1027,6 +1140,7 @@ function resetForm() {
   gpsEl.textContent = 'Sin ubicación';
   gpsEl.className = 'gps-display empty';
   gpsEl.style.color = '';
+  document.getElementById('btn-limpiar-gps').style.display = 'none';
   document.getElementById('f-ilum-sistema').textContent = '';
   document.getElementById('alerta-comercial').innerHTML = '';
   ['estructura','exhibicion','legal','extra'].forEach(type => {
@@ -1067,11 +1181,22 @@ function captureGPS() {
       gpsEl.textContent = `${lat}, ${lon}`;
       gpsEl.className = 'gps-display';
       gpsEl.style.color = 'var(--accent2)';
+      document.getElementById('btn-limpiar-gps').style.display = 'inline-flex';
       showToast('GPS capturado', 'success');
     },
     () => { gpsEl.textContent = 'Error GPS'; gpsEl.className = 'gps-display empty'; showToast('No se pudo obtener GPS','error'); },
     {enableHighAccuracy:true, timeout:10000, maximumAge:0}
   );
+}
+
+function limpiarGPS() {
+  document.getElementById('f-lat').value = '';
+  document.getElementById('f-lon').value = '';
+  const gpsEl = document.getElementById('gps-display');
+  gpsEl.textContent = 'Sin ubicación';
+  gpsEl.className = 'gps-display empty';
+  gpsEl.style.color = '';
+  document.getElementById('btn-limpiar-gps').style.display = 'none';
 }
 
 // ─── PHOTOS ───────────────────────────────────────────────────────────────────
@@ -1156,10 +1281,8 @@ function saveRecord() {
     fotos: currentRecord.fotos
   };
 
-  if (editingIndex >= 0) { records[editingIndex] = record; showToast('Registro actualizado','success'); }
-  else { records.push(record); showToast('Sitio guardado ✓','success'); }
-  saveToStorage();
-  showView('view-home');
+  if (editingIndex >= 0) { records[editingIndex] = record; showToast('Registro actualizado','success'); saveToStorage(); showView('view-home'); }
+  else { records.push(record); saveToStorage(); mostrarSiguienteSitio(record); }
 }
 
 // ─── VIEWS ────────────────────────────────────────────────────────────────────
@@ -1167,10 +1290,15 @@ function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const map = {'view-home':'nav-home','view-buscar':'nav-buscar','view-list':'nav-list'};
+  const map = {'view-home':'nav-home','view-buscar':'nav-buscar','view-list':'nav-list','view-ruta':'nav-ruta'};
   if (map[id]) document.getElementById(map[id]).classList.add('active');
+  // Header: mostrar código de sitio en form, logo en el resto
+  const enForm = id === 'view-form';
+  document.getElementById('header-logo').style.display = enForm ? 'none' : '';
+  document.getElementById('header-sitio').style.display = enForm ? 'block' : 'none';
   if (id==='view-home') { updateHomeStats(); renderRecent(); }
   if (id==='view-list') renderList();
+  if (id==='view-ruta') renderRuta();
   if (id==='view-buscar') {
     document.getElementById('buscar-input').value='';
     document.getElementById('search-results').innerHTML='';
@@ -1472,6 +1600,148 @@ function generarReporteAreas() {
   });
   document.getElementById('report-areas-content').innerHTML = html;
   document.getElementById('report-areas').classList.add('open');
+}
+
+// ─── MÓDULO DE RUTA ───────────────────────────────────────────────────────────
+function calcDist(lat1, lon1, lat2, lon2) {
+  const dlat = (lat2 - lat1) * 111000;
+  const dlon = (lon2 - lon1) * 111000 * Math.cos(lat1 * Math.PI / 180);
+  return Math.round(Math.sqrt(dlat*dlat + dlon*dlon));
+}
+
+function getSitiosPendientes() {
+  if (!inventario.length) return [];
+  const plaza = session.plaza || '';
+  const auditados = new Set(records.map(r => r.codigo));
+  return inventario.filter(r => {
+    if (!r['Latitud'] || !r['Longitud']) return false;
+    if (plaza && String(r['Plaza']||'') !== plaza) return false;
+    const base = String(r['Espacio']||'').replace(/[NC]$/, '').replace(/-\d+$/, '');
+    return !auditados.has(r['Espacio']) && !auditados.has(base);
+  });
+}
+
+function renderRuta() {
+  const lista = document.getElementById('ruta-lista');
+  const sinInv = document.getElementById('ruta-sin-inventario');
+  const progressCard = document.getElementById('ruta-progress-card');
+  if (!inventario.length) { sinInv.style.display='block'; progressCard.style.display='none'; lista.innerHTML=''; return; }
+  sinInv.style.display = 'none';
+  progressCard.style.display = 'block';
+  const plaza = session.plaza || '';
+  const auditados = new Set(records.map(r => r.codigo));
+  const todosSitios = inventario.filter(r => !plaza || String(r['Plaza']||'') === plaza);
+  const vistos = new Set();
+  const sitiosUnicos = todosSitios.filter(r => {
+    const base = String(r['Espacio']||'').replace(/[NC]$/, '').replace(/-\d+$/, '');
+    if (vistos.has(base)) return false;
+    vistos.add(base); return true;
+  });
+  const total = sitiosUnicos.length;
+  const done = sitiosUnicos.filter(r => {
+    const base = String(r['Espacio']||'').replace(/[NC]$/, '').replace(/-\d+$/, '');
+    return auditados.has(r['Espacio']) || auditados.has(base);
+  }).length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('ruta-done').textContent = done;
+  document.getElementById('ruta-total').textContent = total;
+  document.getElementById('ruta-progress-fill').style.width = pct + '%';
+  const pendientes = sitiosUnicos.filter(r => {
+    const base = String(r['Espacio']||'').replace(/[NC]$/, '').replace(/-\d+$/, '');
+    return !auditados.has(r['Espacio']) && !auditados.has(base);
+  });
+  const completados = sitiosUnicos.filter(r => {
+    const base = String(r['Espacio']||'').replace(/[NC]$/, '').replace(/-\d+$/, '');
+    return auditados.has(r['Espacio']) || auditados.has(base);
+  });
+  if (!pendientes.length && !completados.length) {
+    lista.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><p>¡Todos los sitios auditados!</p></div>'; return;
+  }
+  lista.innerHTML = pendientes.map((r, i) => {
+    const disp = String(r['Disponible']||'').toUpperCase() === 'SI';
+    return `<div class="ruta-sitio-card${i===0?' actual':''}">
+      <div class="ruta-sitio-num">${i===0?'▶':i+1}</div>
+      <div class="ruta-sitio-info">
+        <div class="ruta-sitio-code">${disp?'🟢':'🔴'} ${r['Espacio']}</div>
+        <div class="ruta-sitio-dir">${r['Dirección']||''}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+        ${r['Latitud']&&r['Longitud']?`<button class="btn btn-outline btn-sm" onclick="abrirMaps(${r['Latitud']},${r['Longitud']})">🗺</button>`:''}
+        <button class="btn btn-primary btn-sm" onclick="initNewRecord(${JSON.stringify(r).replace(/"/g,'&quot;')})">Auditar</button>
+      </div>
+    </div>`;
+  }).join('') +
+  (completados.length ? `<div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin:16px 0 8px;letter-spacing:.06em;">COMPLETADOS (${completados.length})</div>
+    ${completados.map(r=>`<div class="ruta-sitio-card auditado"><div class="ruta-sitio-num">✓</div>
+      <div class="ruta-sitio-info"><div class="ruta-sitio-code">${r['Espacio']}</div>
+      <div class="ruta-sitio-dir">${r['Dirección']||''}</div></div></div>`).join('')}` : '');
+}
+
+function abrirMaps(lat, lon) {
+  window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=driving`, '_blank');
+}
+
+function mostrarSiguienteSitio(recordGuardado) {
+  showToast('Sitio guardado ✓', 'success');
+  updateHomeStats();
+  if (!navigator.geolocation) { showView('view-home'); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const pendientes = getSitiosPendientes();
+    if (!pendientes.length) { showView('view-home'); setTimeout(()=>showToast('🎉 ¡Plaza completada!','success'),300); return; }
+    const conDist = pendientes.map(r => ({
+      ...r, _dist: calcDist(pos.coords.latitude, pos.coords.longitude, parseFloat(r['Latitud']), parseFloat(r['Longitud']))
+    })).sort((a,b) => a._dist - b._dist);
+    siguienteSitio = conDist[0];
+    mostrarModalSiguiente(siguienteSitio);
+    iniciarGeofence();
+  }, () => { showView('view-home'); }, {enableHighAccuracy:true, timeout:8000, maximumAge:0});
+}
+
+function mostrarModalSiguiente(sitio) {
+  const dist = sitio._dist;
+  const distLabel = dist < 1000 ? `${dist} m` : `${(dist/1000).toFixed(1)} km`;
+  document.getElementById('sig-codigo').textContent = sitio['Espacio'] || '—';
+  document.getElementById('sig-dir').textContent = sitio['Dirección'] || '';
+  document.getElementById('sig-dist').textContent = `📍 ${distLabel} desde tu posición actual`;
+  document.getElementById('siguiente-overlay').classList.add('open');
+}
+
+function cerrarSiguiente() {
+  document.getElementById('siguiente-overlay').classList.remove('open');
+  detenerGeofence();
+  showView('view-buscar');
+}
+
+function irAlSiguiente() {
+  document.getElementById('siguiente-overlay').classList.remove('open');
+  if (siguienteSitio) abrirMaps(siguienteSitio['Latitud'], siguienteSitio['Longitud']);
+  showView('view-ruta');
+}
+
+function iniciarAuditoriaSiguiente() {
+  document.getElementById('siguiente-overlay').classList.remove('open');
+  detenerGeofence();
+  if (siguienteSitio) initNewRecord(siguienteSitio);
+}
+
+function iniciarGeofence() {
+  detenerGeofence();
+  if (!navigator.geolocation || !siguienteSitio) return;
+  const targetLat = parseFloat(siguienteSitio['Latitud']);
+  const targetLon = parseFloat(siguienteSitio['Longitud']);
+  geofenceWatcher = navigator.geolocation.watchPosition(pos => {
+    const dist = calcDist(pos.coords.latitude, pos.coords.longitude, targetLat, targetLon);
+    if (dist <= GEOFENCE_RADIO) {
+      detenerGeofence();
+      if (navigator.vibrate) navigator.vibrate([300,100,300]);
+      document.getElementById('sig-dist').textContent = `📍 ¡Llegaste! A ${dist} m del sitio`;
+      document.getElementById('siguiente-overlay').classList.add('open');
+    }
+  }, null, {enableHighAccuracy:true, maximumAge:5000});
+}
+
+function detenerGeofence() {
+  if (geofenceWatcher !== null) { navigator.geolocation.clearWatch(geofenceWatcher); geofenceWatcher = null; }
 }
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
